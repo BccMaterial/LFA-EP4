@@ -1,15 +1,17 @@
 class MTU
-  attr_accessor :fita, :estado, :cursor, :estado_leitura, :simbolo_leitura, :estado_destino, :simbolo_escrita, :movimento, :transicoes
+  attr_accessor :fita, :estado, :cursor, :fita_string, :transicoes 
 
   def initialize
-    @estado = :q1
-    @cursor = 0
-    @estado = :qi
-    @cursor = 0
-    @movimento_salvo = :D
+    @estado = qi
+    @cursor = 0 #Pos na fita
+    @movimento_salvo = :D #Anda para a primeira pos
   end
-
+  
   def processar(entrada)
+    #if entrada == "cfg_a^n_b^n"
+      #entrada = codifica
+
+
     @fita = "#" + entrada + " " * entrada.size * 3 # fita semi-infinita, virtual
     estado_leitura = ""
     simbolo_leitura = ""
@@ -27,58 +29,85 @@ class MTU
         operar("#", :q0, :D)
       # começa a ler a fita e salva em uma estrutura de memória.
       # neste caso, vamos salvar em uma estrutura do Ruby
-      in [:q0, "a"] # par: estado não-terminal        
-        estado_leitura << "a"
-        operar("a", :q1, :D)
-      in [:q1, "a"] # ímpar: estado terminal
-        estado_leitura << "a"
-        operar("a", :q0, :D)
-      
+
+      #Lê o estado de origem:
+      in [:q0, "f"] #Sempre começa com f
+        estado_leitura << "f" 
+        operar("f", :q01, :D)
+      in [:q01, "a"]
+        estado_leitura << "a" #Pode escolher a ou b 
+        operar("a", :q02, :D)
+      in [:q01, "b"]
+        estado_leitura << "b"
+        operar("b", :q02, :D)
+      in [:q02, "a"] | [:q02, "b"] #Permite ter mais a's ou b's no meio(fa, fab, fabb)
+        estado_leitura << @fita[cursor]
+        operar(@fita[@cursor], :q02, :D)
+      in [:q02, "s"]
+        operar("s", :q1, :N)
+
       ## Leitura de símbolo de leitura
-      in [:q0, "b"] | [:q1, "b"] | [:q2, "b"] # leitura de símbolos
-        simbolo_leitura << "b"
-        operar("b", :q2, :D)
-      in [:q2, "a"] # acabou leitura de símbolos
-        simbolo_leitura << "a"
-        operar("a", :q4, :D)
+      in [:q1. "s"]
+        simbolo_leitura << "s"
+        operar("s", :q1, :D)
+      in [:q1, "c"]
+        simbolo_leitura << "c"
+        operar("c", :q3, :D) #Muda para q3 quando encontra um c
+      in [:q3, "s"]
+        simbolo_leitura << "s"
+        operar("c", :q3, :D)
+      in [:q3, "c"]
+        simbolo_leitura << "c" 
+        operar("c", :q4, :D) #Muda para q4 quando encontra um c
       
       # leitura de estado de destino
-      in [:q4, "a"] # leitura de estado de destino - par
-        estado_destino << "a"
-        operar("a", :q5, :D)
-      in [:q5, "a"] # leitura de estado de destino - ímpar
-        estado_destino << "a"
-        operar("a", :q4, :D)
-      
+      in [:q4, "f"] #f indicando que o estado vai começar
+        estado_destino << "f"
+        operar("f", :q41, :D)
+      in [:q41, "a"] | [:q41, "b"] #ESpera a ou b
+        estado_destino << @fita[@cursor]
+        operar(@fita[@cursor], :q42, :D)
+      in [:q42, "a"] | [:q42, "b"] #Opção de continuar escrevendo a's ou b's
+        estado_destino << @fita[@cursor]
+        operar(@fita[@cursor], :q42, :D)
+      in [:q42, "s"]
+        operar("s", :q5, :N) #Avança para o estado q5 quando encontrar "s"
+
       # leitura de símbolo de escrita
-      in [:q4, "b"] | [:q5, "b"] | [:q6, "b"] # leitura de símbolos
-        simbolo_escrita << "b"
-        operar("b", :q6, :D)
-      in [:q6, "a"] # acabou leitura de símbolos
-        simbolo_escrita << "a"
-        operar("a", :q7, :D)
+      in [:q5, "s"] #Adiciona um s ao simbolo_escrita e continua em q5
+        simbolo_escrita << "s" 
+        operar("s", :q5, :D) 
+      in [:q5, "c"] #Adiciona um c ao simbolo_escrita e vai pra q6
+        simbolo_escrita << "c"
+        operar("c", :q6, :D) 
+      in [:q6, "s"] 
+        simbolo_escrita << "s" 
+        operar("s", :q6, :D)
+      in [:q6, "c"]  #Acumula c's e vai para q7
+        simbolo_escrita << "s" 
+        operar("C", :q7, :D) 
 
       # Leitura de movimento
-      in [:q7, "c"] # esquerda
-        movimento = :E
-        operar("c", :q8, :D)
-      in [:q8, "c"] # direita
+      in [:q7, "d"]
         movimento = :D
-        operar("c", :q8, :D)
+        operar("d", :q8, :D)
+      in [:q7, "e"]
+        movimento = :E
+        operar("e", :q8, :D)
 
       # reinicia a máquina
-      in [:q8, "a"] 
+      in [:q8, "_"] 
         # direta, salva transição
         leitura = [estado_leitura, simbolo_leitura]
         transicoes[leitura] = [simbolo_escrita, estado_destino, movimento]
         puts("Transição lida: (#{estado_leitura},#{simbolo_leitura})->(#{simbolo_escrita},#{estado_destino},#{movimento})")
         
-        estado_leitura = "a"
+        estado_leitura = ""
         simbolo_leitura = ""
         estado_destino = ""
         simbolo_escrita = ""
 
-        operar("a", :q1, :D)
+        operar("", :q0, :D)
 
       ######### leitura dos símbolos de w ##########   
       # começa a leitura dos símbolos e processamento de w
@@ -94,21 +123,21 @@ class MTU
         puts("=========== Leitura dos símbolos: ===========")
         operar("$", :q20, :D)
         simbolo_leitura = ""
-      in [:q20, 'b']
-        simbolo_leitura << "b"
-        operar("b", :q20, :D)
-      in [:q20, 'a']
-        simbolo_leitura << "a"
-        operar("a", :q21, :D)
+      in [:q20, 's']
+        simbolo_leitura << "s"
+        operar("s", :q20, :D)
+      in [:q20, 'c']
+        simbolo_leitura << "c"
+        operar("c", :q21, :D)
       
-      in [:q21, 'b'] # recomeça a leitura
+      in [:q21, 's'] # recomeça a leitura
         @fita_cadeia << simbolo_leitura
 
         # reinicia a leitura dos símbolos
-        simbolo_leitura = "b"
-        operar("b", :q20, :D)
+        simbolo_leitura = "s"
+        operar("s", :q20, :D)
         
-      in [:q21, ' '] # finaliza leitura
+      in [:q21, '_'] # finaliza leitura
         @fita_cadeia << simbolo_leitura
         
         puts("=========== Fita de símbolos: ===========\n")
@@ -116,7 +145,7 @@ class MTU
         
         ######## iniciando a leitura de w
         return submaquina(transicoes)
-      else
+      else #REVER DEPOIS
         puts "(#{estado_leitura},#{simbolo_leitura}) = (#{estado_destino},#{simbolo_escrita},#{movimento})"
         return false
       end
@@ -125,7 +154,7 @@ class MTU
 
   def submaquina(transicoes)
     # estado inicial da máquina a ser simulada
-    estado_mt = "aa"
+    estado_mt = "fa"
     @cursor_leitura = 0
 
     while true
@@ -134,31 +163,19 @@ class MTU
       leitura = [estado_mt, simbolo_leitura]
       puts "(#{estado_mt}, #{simbolo_leitura})"
       resultado = transicoes[leitura]
-      simbolo_escrita = resultado[0]
-      estado_destino = resultado[1]
-      movimento = resultado[2]
-      puts "-> (#{estado_destino},#{simbolo_escrita},#{movimento})"
+      
+      return false unless resultado
+
+      simbolo_escrita, estado_destino, movimento = resultado
+      puts "(#{estado_mt}, #{simbolo_leitura} -> (#{estado_destino}, #{simbolo_escrita}, #{movimento}))"
 
       estado_mt = estado_destino
+
       @fita_cadeia[@cursor_leitura] = simbolo_escrita
 
-      if (simbolo_leitura == "ba")
-        puts "\n=========================================="
-        puts "Finalizando a leitura na máquina principal"
-        puts "Estado final da máquina: #{estado_mt}"
-        puts "==========================================\n\n"
-        if (estado_mt.size % 2 == 1) # impar, aceitação
-          return true
-        else
-          return false
-        end
-      end
+      return true if simbolo_leitura == "scc" && estado_mt.start_with("fb")
 
-      if movimento == :D
-        @cursor_leitura += 1
-      else
-        @cursor_leitura -= 1
-      end
+      movimento = :D ? @cursor_leitura += 1 : @cursor_leitura -= 1
     end
   end
 
@@ -172,11 +189,22 @@ class MTU
     end
   end
 
-  def fita
-    @fita_cadeia
+  def encoding_anbn
+    "faasscsccfsbsccdscc_" +
+    "$sccsccscc_"
   end
 
-  def cursor
-    @cursor
+  def encoding_anbncn
+    "faasscsccfsbsccdscc_" +
+    "fbsccscsccfcsccsccdscc_" +
+    "$sccsccsccscc_"
   end
+
+  def encoding_multiplicacao
+    "faasscsccfsbsccdscc_" +
+    "fbsccscsccfcsccsccdscc_" +
+    "fccsccsccfdsccsccdscc_" +
+    "$sccsccscc_"
+  end
+
 end

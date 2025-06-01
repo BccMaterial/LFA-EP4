@@ -1,3 +1,5 @@
+#NÃO USAR COMO REFERÊNCIA
+
 ## estados não finais 
 ## a^{2(i+1)}
 q0 = "aa"
