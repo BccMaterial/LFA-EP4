@@ -2,7 +2,7 @@ class MTU
   attr_accessor :fita, :estado, :cursor, :fita_string, :transicoes 
 
   def initialize
-    @estado = qi
+    @estado = :qi
     @cursor = 0 #Pos na fita
     @movimento_salvo = :D #Anda para a primeira pos
   end
@@ -47,7 +47,7 @@ class MTU
         operar("s", :q1, :N)
 
       ## Leitura de símbolo de leitura
-      in [:q1. "s"]
+      in [:q1, "s"]
         simbolo_leitura << "s"
         operar("s", :q1, :D)
       in [:q1, "c"]
