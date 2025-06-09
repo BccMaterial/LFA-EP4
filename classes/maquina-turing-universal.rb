@@ -8,9 +8,13 @@ class MTU
   end
   
   def processar(entrada)
-    #if entrada == "cfg_a^n_b^n"
-      #entrada = codifica
-
+    if entrada == "cfg_a^n_b^n"
+      entrada = encoding_anbn
+    elsif entrada == "cfg_a^n_b^n_c^n"
+      entrada = encoding_anbncn
+    elsif entrada == "cfg_multiplicacao"
+      entrada = encoding_multiplicacao
+    end
 
     @fita = "#" + entrada + " " * entrada.size * 3 # fita semi-infinita, virtual
     estado_leitura = ""
@@ -84,8 +88,8 @@ class MTU
         simbolo_escrita << "s" 
         operar("s", :q6, :D)
       in [:q6, "c"]  #Acumula c's e vai para q7
-        simbolo_escrita << "s" 
-        operar("C", :q7, :D) 
+      simbolo_escrita << "c"
+      operar("c", :q7, :D)
 
       # Leitura de movimento
       in [:q7, "d"]
@@ -175,7 +179,11 @@ class MTU
 
       return true if simbolo_leitura == "scc" && estado_mt.start_with("fb")
 
-      movimento = :D ? @cursor_leitura += 1 : @cursor_leitura -= 1
+      if movimento == :D
+        @cursor_leitura += 1
+      else
+        @cursor_leitura -= 1
+      end
     end
   end
 
@@ -189,18 +197,23 @@ class MTU
     end
   end
 
-  def encoding_anbn
-    "faasscsccfsbsccdscc_" +
+  def encoding_anbn #MT que reconhece uma Linguagem Livre de Contexto $a^nb^n$
+    "faasscsccfsbsccdscc_" +  
+    "fsbscsccfscsccdscc_" + 
+    "fscscsccfbbsccdscc_" +  
+    "fbbscsccfbbsccdscc_" +  
     "$sccsccscc_"
   end
 
-  def encoding_anbncn
-    "faasscsccfsbsccdscc_" +
-    "fbsccscsccfcsccsccdscc_" +
-    "$sccsccsccscc_"
+  def encoding_anbncn # MT que reconhece uma Linguagem Sensível ao Contexto $a^nb^nc^n$ 
+    "faasscsccfsbsccdscc_" + 
+    "fsbscsccfscsccdscc_" +  
+    "fscscsccfbbsccdscc_" + 
+    "fbbscsccfbbsccdscc_" + 
+    "$sccsccscc_"
   end
 
-  def encoding_multiplicacao
+  def encoding_multiplicacao # MT que faz multiplicações a x b. Exemplo: 3x2 = 6 ⇒ aaabb ⇒ cccccc
     "faasscsccfsbsccdscc_" +
     "fbsccscsccfcsccsccdscc_" +
     "fccsccsccfdsccsccdscc_" +
@@ -208,3 +221,4 @@ class MTU
   end
 
 end
+
